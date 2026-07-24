@@ -1,0 +1,31 @@
+---
+title: 'How to understand Kimi K2.6’s raw INT4 weights and dequantize them into BF16?'
+description: 'As I’m following the official guide of KTransformers to LoRA SFT Kimi K2.6, I found that dequantization is reuiqred but not further guided.'
+pubDate: 'Jul 23 2026'
+---
+
+import { Image } from 'astro:assets';
+import safetensorMap from '../../assets/posts/kimi-k2-safetensor-map.png';
+import dequantProcedure from '../../assets/posts/kimi-k2-dequantization.png';
+
+As I’m following the official guide of KTransformers to LoRA SFT Kimi K2.6, I found that dequantization is reuiqred but not further guided. So I decide to apply my knowledge on quantization and carry out the conversion hands-on.
+
+## How the quantization happens
+
+Here’s how the quantization happens: a BF16 weight is divided by a scale (called weight scale), then rounded to a signed INT4 value (called weight packed). Also there’s an additional tensor (called wight shape) to store the original weight dimensions. In a numerical level, a BF16 value uses 16 bits, [15] [14 13 12 11 10 9 8 7] [6 5 4 3 2 1 0] for sign, exponent and fraction respectively. While INT4 is just a 4-bit code, [3 2 1 0]. It’s interesting to notice that for signed INT4, bit 3 indicates the sign, but all four bits jointly encode the value: 0000 = 0, ..., 0111 = 7, 1000 = -8, …, 1111 = -1. Specifically, Kimi K2.6 stores offset-coded INT4: 0000 = -8, ..., 0111 = -1, 1000 = 0, …, 1111 = 7.
+
+## Diving into the Safetensor files
+
+The next useful step would be dive into Kimi K2.6’s Safetensor files—starting with the headers, of course, since we human can’t read raw binary directly. ^^ By a quick glance, we’ll understand how tentors are organized across the 61 language-model layers, 384 experts per layer and other components. (Btw, check the model architecture spec here in huggingface: https://huggingface.co/moonshotai/Kimi-K2.6 ) For Safetensor shards from 00001 to 00064, only shards from 00002 to 00061 need further attention. Within them, only weight packed for the down, gate and up projections of all routed experts are store in I32 that contains eight INT4. Additionally, weight shape is also stored in 2 I32, each represents one dimension value. To make all above description clearer, I’ve attatched below one slide I made recently：)
+
+<Image src={safetensorMap} alt="Safetensor files, components, dtype, and operation for Kimi K2.x" />
+
+## Dequantization
+
+The rest of the story now moves smoothly. For all the other non-I32 tensors, we copy as unchanged. For each I32 weight packed, we first read the corresponding weight shape, unpack I32 into eight 4-bit codes, and then decode them as offset-coded INT4 values. We then read the corresponding BF16 weight scale, and multiply it back to weight packed to reconstruct a BF16 weight. It’s also worth mentioning that Kimi K2.6 adopts group-wise quantization with a group size of 32, meaning that one scale is shared by every 32 INT4 values. Another detail is that it is the best to do the multiplication in FP32, and then cast back to BF16.
+
+<Image src={dequantProcedure} alt="Dequantization procedure for Kimi K2.x INT4 to BF16" />
+
+## Closing
+
+Now we’ve come to the end of this post! I hope you found it insightful or feel ready to try it hands-on. I’ve also shared a code demo on GitHub if you needed: https://github.com/xianhanglin/kimi-k2.6-int4-to-bf16 . Thanks for reading, see you!
