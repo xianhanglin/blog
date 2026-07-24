@@ -6,8 +6,7 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 // https://astro.build/config
 export default defineConfig({
-	// Update this to your Vercel URL after the first deploy (e.g. https://your-project.vercel.app)
-	site: 'https://xianhang-lin.vercel.app',
+	site: 'https://blog-one-mu-46.vercel.app',
 	integrations: [mdx(), sitemap()],
 	fonts: [
 		{
