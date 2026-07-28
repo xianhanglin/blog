@@ -8,7 +8,7 @@ import Header from '../components/Header.astro';
 
 type Props = CollectionEntry<'blog'>['data'];
 
-const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, sourceUrl } = Astro.props;
 ---
 
 <html lang="en">
@@ -39,15 +39,22 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 			.title {
 				margin-bottom: 1em;
 				padding: 1em 0;
-				text-align: center;
-				line-height: 1;
+				text-align: left;
+				line-height: 1.4;
 			}
 			.title h1 {
-				margin: 0 0 0.5em 0;
+				margin: 0 0 0.35em 0;
+				font-size: 1.25em;
+				font-weight: 700;
+				line-height: 1.4;
 			}
 			.date {
 				margin-bottom: 0.5em;
 				color: rgb(var(--gray));
+			}
+			.source {
+				margin: 0.35em 0 0;
+				font-size: 0.95em;
 			}
 			.last-updated-on {
 				font-style: italic;
@@ -77,6 +84,15 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 							}
 						</div>
 						<h1>{title}</h1>
+						{
+							sourceUrl && (
+								<p class="source">
+									<a href={sourceUrl} target="_blank" rel="noopener noreferrer">
+										Original LinkedIn post
+									</a>
+								</p>
+							)
+						}
 						<hr />
 					</div>
 					<slot />
